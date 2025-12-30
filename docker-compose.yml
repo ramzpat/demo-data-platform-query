@@ -16,54 +16,36 @@ services:
       timeout: 5s
       retries: 10
 
-  postgres:
-    image: postgres:16
-    environment:
-      POSTGRES_USER: polaris
-      POSTGRES_PASSWORD: polaris
-      POSTGRES_DB: polaris
-    ports:
-      - "5432:5432"
-    volumes:
-      - ./data/postgres:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U polaris"]
-      interval: 5s
-      timeout: 5s
-      retries: 10
-
   polaris:
     image: apache/polaris:1.2.0-incubating
     depends_on:
-      postgres:
-        condition: service_healthy
       minio:
         condition: service_started
     environment:
-      POLARIS_DB_URL: jdbc:postgresql://postgres:5432/polaris
-      POLARIS_DB_USER: polaris
-      POLARIS_DB_PASSWORD: polaris
-      POLARIS_S3_ENDPOINT: http://minio:9000
-      POLARIS_S3_ACCESS_KEY: minioadmin
-      POLARIS_S3_SECRET_KEY: minioadmin
-      POLARIS_S3_PATH_STYLE: "true"
-      POLARIS_DEFAULT_NAMESPACE: default
-      POLARIS_HTTP_PORT: "8181"
+      # Use H2 in-memory database (matches official quickstart)
+      QUARKUS_DATASOURCE_JDBC_URL: jdbc:h2:mem:polaris
+      QUARKUS_DATASOURCE_USERNAME: sa
+      QUARKUS_DATASOURCE_PASSWORD: ""
+      # Storage location for catalogs
+      STORAGE_LOCATION: s3://demo-warehouse/
+      # Java options
+      JAVA_TOOL_OPTIONS: "-Duser.timezone=UTC"
     ports:
       - "8181:8181"
+      - "8182:8182"
     healthcheck:
-      test: ["CMD-SHELL", "curl -sf http://localhost:8182/q/health || exit 1"]
+      test: ["CMD", "nc", "-z", "localhost", "8181"]
       interval: 10s
       timeout: 5s
       retries: 20
-      start_period: 20s
+      start_period: 30s
 
   trino:
     image: trinodb/trino:479
     platform: linux/amd64
     depends_on:
       polaris:
-        condition: service_healthy
+        condition: service_started
       minio:
         condition: service_started
     ports:
@@ -83,7 +65,7 @@ services:
     platform: linux/amd64
     depends_on:
       polaris:
-        condition: service_healthy
+        condition: service_started
       minio:
         condition: service_started
     ports:
