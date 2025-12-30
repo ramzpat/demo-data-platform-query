@@ -95,13 +95,14 @@ services:
       JAVA_TOOL_OPTIONS: "-Duser.timezone=UTC"
     volumes:
       - ./config/kyuubi:/opt/kyuubi/conf
-      - ./config/kyuubi/spark-defaults.conf:/opt/spark/conf/spark-defaults.conf
-    command: ["/opt/kyuubi/bin/kyuubi", "start"]
+      - ./config/kyuubi/spark-defaults.conf:/opt/kyuubi/externals/spark-3.5.2-bin-hadoop3/conf/spark-defaults.conf
+    command: ["/opt/kyuubi/bin/kyuubi", "run"]
     healthcheck:
       test: ["CMD", "nc", "-z", "localhost", "10009"]
       interval: 10s
-      timeout: 5s
-      retries: 10
+      timeout: 10s
+      retries: 30
+      start_period: 60s
 
 networks:
   default:
